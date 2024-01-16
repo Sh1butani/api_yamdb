@@ -1,31 +1,65 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
+MAX_LENGTH = 150
+MAX_EMAIL_LENGTH = 254
+MAX_TITLE_LENGTH = 20
+MAX_NAME_LENGTH = 256
+MAX_SLUG_LENGTH = 50
 
 
 class User(AbstractUser):
     """Кастомная модель пользователя"""
 
-    ROLES = (
+    ROLES = [
         (USER, 'user'),
         (MODERATOR, 'moderator'),
         (ADMIN, 'admin')
+    ]
+    username = models.CharField(
+        'Имя пользователя',
+        unique=True,
+        max_length=MAX_LENGTH,
+        validators=[RegexValidator(
+            regex=r'^[\w.@+-]+\Z',
+            message='Недопустимый символ!'
+        )]
     )
 
-    email = models.EmailField(max_length=254,
+    email = models.EmailField(max_length=MAX_EMAIL_LENGTH,
                               unique=True,
                               verbose_name='Почта')
-    bio = models.TextField(blank=True, verbose_name='Биография')
+    first_name = models.CharField(
+        'Имя', max_length=MAX_LENGTH, blank=True
+    )
+    last_name = models.CharField(
+        'Фамилия', max_length=MAX_LENGTH, blank=True
+    )
+    bio = models.TextField(
+        'Биография',
+        blank=True
+    )
     role = models.CharField(
-        max_length=25,
+        'Роль',
         choices=ROLES,
         default=USER,
-        verbose_name='Роль'
+        max_length=25,
     )
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(username=models.F('me')),
+                name="prevent_username_me"
+            )
+        ]
 
     @property
     def is_admin(self):
@@ -47,13 +81,13 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
-        return self.username
+        return self.username[:MAX_TITLE_LENGTH]
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=256,
+    name = models.CharField(max_length=MAX_NAME_LENGTH,
                             verbose_name='Название')
-    slug = models.SlugField(max_length=50,
+    slug = models.SlugField(max_length=MAX_SLUG_LENGTH,
                             unique=True,
                             verbose_name='Уникальный слаг')
 
@@ -62,9 +96,9 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    name = models.CharField(max_length=256,
+    name = models.CharField(max_length=MAX_NAME_LENGTH,
                             verbose_name='Название')
-    slug = models.SlugField(max_length=50,
+    slug = models.SlugField(max_length=MAX_SLUG_LENGTH,
                             unique=True,
                             verbose_name='Уникальный слаг')
 
@@ -86,7 +120,7 @@ class Title(models.Model):
         verbose_name='Жанр',
     )
     name = models.CharField(
-        max_length=256, verbose_name='Название'
+        max_length=MAX_NAME_LENGTH, verbose_name='Название'
     )
     year = models.IntegerField(
         verbose_name='Год издания'
