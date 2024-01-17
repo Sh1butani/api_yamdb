@@ -1,6 +1,7 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Avg
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
@@ -41,31 +42,28 @@ def signup(request):
     Добавляет нового пользователя. Отправляет код подтверждения на почту.
     """
     serializer = SignupSerializer(data=request.data)
-    if serializer.is_valid():
+    serializer.is_valid(raise_exception=True)
+    try:
         username = serializer.validated_data.get('username')
         email = serializer.validated_data.get('email')
         user, created = User.objects.get_or_create(
             username=username, email=email
         )
-        if created:
-            confirmation_code = default_token_generator.make_token(user)
-            send_mail(
-                subject='Регистрация в YaMDb',
-                message=f'Ваш проверочный код: {confirmation_code}',
-                from_email=DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email]
-            )
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(
-                {"error": "Пользователь уже существует"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    else:
+    except IntegrityError:
         return Response(
-            {"error": "Отсутствует обязательное поле или оно некорректно"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            'Эта электронная почта уже занята!' if User.objects.filter(
+                email=serializer.validated_data.get("email")
+            ).exists()
+            else 'Это имя пользователя уже занято!',
+            status.HTTP_400_BAD_REQUEST)
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail(
+        subject='Регистрация в YaMDb',
+        message=f'Ваш проверочный код: {confirmation_code}',
+        from_email=DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email]
+    )
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -80,9 +78,13 @@ def get_token(request):
     if default_token_generator.check_token(
         user, serializer.validated_data.get('confirmation_code')
     ):
-        token = AccessToken.for_user(user)
-        return Response({'token': token}, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'token': str(AccessToken.for_user(user))},
+            status=status.HTTP_200_OK)
+    return Response(
+        {'confirmation_code': 'Некорректный код подтверждения'},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):

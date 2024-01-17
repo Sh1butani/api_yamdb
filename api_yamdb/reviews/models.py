@@ -54,12 +54,6 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-        constraints = [
-            models.CheckConstraint(
-                check=~models.Q(username__icontains='me'),
-                name="prevent_username_me"
-            )
-        ]
 
     @property
     def is_admin(self):
