@@ -4,19 +4,27 @@ from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import (
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Genre, Title, User
 
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from .filters import TitleFilter
-from .permissions import IsSuperUserOrIsAdminOnly
+from .permissions import (
+    AnonimReadOnly,
+    IsSuperUserOrIsAdminOnly,
+    IsSuperUserIsAdminIsModeratorIsAuthor
+)
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
+    ReviewSerializer,
     SignupSerializer,
     TitleCreateSerializer,
     TitleSerializer,
@@ -26,7 +34,11 @@ from .serializers import (
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def signup(request):
+    """
+    Добавляет нового пользователя. Отправляет код подтверждения на почту.
+    """
     serializer = SignupSerializer(data=request.data)
     if serializer.is_valid():
         username = serializer.validated_data.get('username')
@@ -56,7 +68,9 @@ def signup(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def get_token(request):
+    """Возвращает пользователю токен для авторизации."""
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = get_object_or_404(
@@ -71,6 +85,7 @@ def get_token(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет пользователя."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsSuperUserOrIsAdminOnly,)
@@ -81,6 +96,7 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['get', 'patch', 'delete'],
         url_path=r'(?P<username>[\w.@+-]+)',
+        permission_classes=(IsAuthenticated,)
     )
     def get_user_by_username(self, request, username):
         """Получает данные пользователя по его username"""
@@ -100,6 +116,7 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['get', 'patch'],
         url_path='me',
+        permission_classes=(IsAuthenticated,)
     )
     def get_users_own_profile(self, request):
         """Пользователь получает информацию о себе и может редактировать её."""
@@ -144,7 +161,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     """Вьюсет произведений"""
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
-    permission_classes =
+    permission_classes = (AnonimReadOnly, IsSuperUserOrIsAdminOnly)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -152,3 +169,23 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return TitleSerializer
         return TitleCreateSerializer
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    """Вьюсет отзывов."""
+    serializer_class = ReviewSerializer
+    permission_classes = (
+        IsAuthenticatedOrReadOnly, IsSuperUserIsAdminIsModeratorIsAuthor
+    )
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        return get_object_or_404(
+            Title, pk=self.kwargs.get('title_id')
+            ).reviews.all()
+
+    def perform_create(self, serializer):
+        serializer.save(
+            author=self.request.user,
+            title=get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        )
