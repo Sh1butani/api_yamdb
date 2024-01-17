@@ -1,8 +1,9 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from reviews.models import (
-    MAX_LENGTH, Category, Comment, Genre, Review, Title, User
+    MAX_LENGTH, MAX_EMAIL_LENGTH, Category, Comment, Genre, Review, Title, User
 )
 
 
@@ -35,6 +36,13 @@ class TokenSerializer(serializers.Serializer):
 
 
 class SignupSerializer(serializers.Serializer):
+
+    email = serializers.EmailField(
+        max_length=MAX_LENGTH, required=True
+    )
+    username = serializers.CharField(
+        max_length=MAX_EMAIL_LENGTH, required=True
+    )
 
     class Meta:
         model = User
@@ -99,8 +107,12 @@ class TitleCreateSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
 
-    author = serializers.StringRelatedField(
+    author = serializers.SlugRelatedField(
+        slug_field='username',
         read_only=True
+    )
+    score = serializers.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(10)]
     )
 
     class Meta:

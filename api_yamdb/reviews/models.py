@@ -56,7 +56,7 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
         constraints = [
             models.CheckConstraint(
-                check=~models.Q(username=models.F('me')),
+                check=~models.Q(username__icontains='me'),
                 name="prevent_username_me"
             )
         ]
