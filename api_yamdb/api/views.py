@@ -99,7 +99,6 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['get', 'patch', 'delete'],
         url_path=r'(?P<username>[\w.@+-]+)',
-        permission_classes=(IsAuthenticated,)
     )
     def get_user_by_username(self, request, username):
         """Получает данные пользователя по его username"""
@@ -119,7 +118,6 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['get', 'patch'],
         url_path='me',
-        permission_classes=(IsAuthenticated,)
     )
     def get_users_own_profile(self, request):
         """Пользователь получает информацию о себе и может редактировать её."""
