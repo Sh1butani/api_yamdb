@@ -1,6 +1,9 @@
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
 
-from reviews.models import Title, Genre, Category, User, Comment, MAX_LENGTH
+from reviews.models import (
+    MAX_LENGTH, Category, Comment, Genre, Review, Title, User
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -92,6 +95,30 @@ class TitleCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Title
         fields = '__all__'
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+
+    author = serializers.StringRelatedField(
+        read_only=True
+    )
+
+    class Meta:
+        model = Review
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
+
+    def validate(self, data):
+        """Запрещает пользователям оставлять повторные отзывы."""
+        request = self.context["request"]
+        if request.method == "POST":
+            author = request.user
+            title_id = self.context["view"].kwargs.get("title_id")
+            title = get_object_or_404(Title, pk=title_id)
+            if Review.objects.filter(author=author, title=title).exists():
+                raise serializers.ValidationError(
+                    'Вы уже оставляли отзыв на это произведение.'
+                )
+        return data
 
 
 class CommentSerializer(serializers.ModelSerializer):
