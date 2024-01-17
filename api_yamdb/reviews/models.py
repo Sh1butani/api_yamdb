@@ -151,7 +151,7 @@ class TitleGenre(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return f'{self.title} - {self.genre}'
 
 
 class Review(models.Model):

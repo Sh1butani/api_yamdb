@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from reviews.models import Title, Genre, Category, User, MAX_LENGTH
+from reviews.models import Title, Genre, Category, User, Comment, MAX_LENGTH
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -92,3 +92,15 @@ class TitleCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Title
         fields = '__all__'
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
+
+    class Meta:
+        model = Comment
+        fields = ('id', 'text', 'author', 'pub_date')

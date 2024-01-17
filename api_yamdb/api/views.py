@@ -9,17 +9,19 @@ from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import Category, Genre, Title, User
+from reviews.models import Category, Genre, Title, User, Review
 
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from .filters import TitleFilter
-from .permissions import IsSuperUserOrIsAdminOnly
+from .permissions import (IsSuperUserOrIsAdminOnly,
+                          IsSuperUserIsAdminIsModeratorIsAuthor)
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
     SignupSerializer,
     TitleCreateSerializer,
     TitleSerializer,
+    CommentSerializer,
     TokenSerializer,
     UserSerializer,
 )
@@ -114,7 +116,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
 
 class CreateListDeleteViewSet(
     viewsets.GenericViewSet,
@@ -144,7 +146,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     """Вьюсет произведений"""
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
-    permission_classes =
+    permission_classes = (IsSuperUserOrIsAdminOnly)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -152,3 +154,21 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return TitleSerializer
         return TitleCreateSerializer
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    """Вьюсет комментариев"""
+    serializer_class = CommentSerializer
+    permission_classes = (IsSuperUserIsAdminIsModeratorIsAuthor)
+
+    def get_review(self):
+        return get_object_or_404(
+            Review,
+            pk=self.kwargs.get('review_id'),
+            title__id=self.kwargs.get('title_id'))
+
+    def get_queryset(self):
+        return self.get_review().comments.all()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, review=self.get_review())
