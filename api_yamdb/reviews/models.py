@@ -3,6 +3,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+
 USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
@@ -11,11 +12,11 @@ MAX_EMAIL_LENGTH = 254
 MAX_TITLE_LENGTH = 20
 MAX_NAME_LENGTH = 256
 MAX_SLUG_LENGTH = 50
+MAX_ROLE_LENGTH = 25
 
 
 class User(AbstractUser):
     """Кастомная модель пользователя"""
-
     ROLES = [
         (USER, 'user'),
         (MODERATOR, 'moderator'),
@@ -30,10 +31,9 @@ class User(AbstractUser):
             message='Недопустимый символ!'
         )]
     )
-
-    email = models.EmailField(max_length=MAX_EMAIL_LENGTH,
-                              unique=True,
-                              verbose_name='Почта')
+    email = models.EmailField(
+        'Почта', max_length=MAX_EMAIL_LENGTH, unique=True
+    )
     first_name = models.CharField(
         'Имя', max_length=MAX_LENGTH, blank=True
     )
@@ -41,14 +41,13 @@ class User(AbstractUser):
         'Фамилия', max_length=MAX_LENGTH, blank=True
     )
     bio = models.TextField(
-        'Биография',
-        blank=True
+        'Биография', blank=True
     )
     role = models.CharField(
         'Роль',
         choices=ROLES,
         default=USER,
-        max_length=25,
+        max_length=MAX_ROLE_LENGTH,
     )
 
     class Meta:
@@ -82,6 +81,8 @@ class Category(models.Model):
                             verbose_name='Уникальный слаг')
 
     class Meta:
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
         ordering = ['name']
 
     def __str__(self):
@@ -96,6 +97,8 @@ class Genre(models.Model):
                             verbose_name='Уникальный слаг')
 
     class Meta:
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
         ordering = ['name']
 
     def __str__(self):
@@ -113,7 +116,7 @@ class Title(models.Model):
     genre = models.ManyToManyField(
         Genre,
         through='TitleGenre',
-        verbose_name='Жанр',
+        verbose_name='Жанр'
     )
     name = models.CharField(
         max_length=MAX_NAME_LENGTH, verbose_name='Название'
@@ -126,6 +129,8 @@ class Title(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
         ordering = ['name',]
 
     def __str__(self):
@@ -188,7 +193,7 @@ class Review(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
-        return f'{self.author} left review on {self.title}'
+        return f'{self.author} оставил отзыв на {self.title}'
 
 
 class Comment(models.Model):

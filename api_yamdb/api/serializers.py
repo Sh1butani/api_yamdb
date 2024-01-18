@@ -18,14 +18,14 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_username(self, username):
         if username in 'me':
             raise serializers.ValidationError(
-                'Использовать имя me запрещено'
+                'Использовать имя "me" запрещено'
             )
         return username
 
 
 class UserEditSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
-        read_only_fields = ("role",)
+        read_only_fields = ('role',)
 
 
 class TokenSerializer(serializers.Serializer):
@@ -58,7 +58,7 @@ class SignupSerializer(serializers.Serializer):
     def validate_username(self, value):
         if value == 'me':
             raise serializers.ValidationError(
-                'Имя пользователя "me" не разрешено.'
+                'Использовать имя "me" запрещено'
             )
         return value
 

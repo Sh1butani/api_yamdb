@@ -51,7 +51,7 @@ def signup(request):
     except IntegrityError:
         return Response(
             'Эта электронная почта уже занята!' if User.objects.filter(
-                email=serializer.validated_data.get("email")
+                email=serializer.validated_data.get('email')
             ).exists()
             else 'Это имя пользователя уже занято!',
             status.HTTP_400_BAD_REQUEST)
@@ -92,10 +92,10 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = (IsSuperUserOrIsAdminOnly,)
     pagination_class = PageNumberPagination
-    lookup_field = 'username'
     filter_backends = [SearchFilter]
+    lookup_field = 'username'
     search_fields = ['username']
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
 
     @action(
         detail=False,
@@ -134,28 +134,28 @@ class CreateListDeleteViewSet(
 
 
 class CategoryViewSet(CreateListDeleteViewSet):
-    """Вьюсет категорий"""
+    """Вьюсет категорий."""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (IsAdminOrReadOnly,)
 
 
 class GenreViewSet(CreateListDeleteViewSet):
-    """Вьюсет жанров"""
+    """Вьюсет жанров."""
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminOrReadOnly,)
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    """Вьюсет произведений"""
+    """Вьюсет произведений."""
     queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -164,11 +164,11 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    """Вьюсет комментариев"""
+    """Вьюсет комментариев."""
     serializer_class = CommentSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
 
     def get_queryset(self):
         review_id = get_object_or_404(Review, pk=self.kwargs.get('review_id'))
@@ -177,8 +177,9 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(
             review=get_object_or_404(
-                Review, pk=self.kwargs['review_id'], ),
-            author=self.request.user,
+                Review, pk=self.kwargs['review_id']
+            ),
+            author=self.request.user
         )
 
 
@@ -187,7 +188,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
 
     def get_queryset(self):
         return get_object_or_404(
