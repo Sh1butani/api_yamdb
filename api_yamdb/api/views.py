@@ -9,8 +9,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
-    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
-)
+    AllowAny)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Genre, Title, User, Review
@@ -18,9 +17,9 @@ from reviews.models import Category, Genre, Title, User, Review
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from .filters import TitleFilter
 from .permissions import (
-    AnonimReadOnly,
     IsSuperUserOrIsAdminOnly,
-    IsSuperUserIsAdminIsModeratorIsAuthor
+    IsAdminOrReadOnly,
+    IsAdminModeratorAuthorOrReadOnly
 )
 from .serializers import (
     CategorySerializer,
@@ -150,19 +149,21 @@ class CategoryViewSet(CreateListDeleteViewSet):
     """Вьюсет категорий"""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
 
 
 class GenreViewSet(CreateListDeleteViewSet):
     """Вьюсет жанров"""
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrReadOnly,)
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     """Вьюсет произведений"""
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
-    permission_classes = (AnonimReadOnly, IsSuperUserOrIsAdminOnly)
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -175,33 +176,34 @@ class TitleViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """Вьюсет комментариев"""
     serializer_class = CommentSerializer
-    permission_classes = (IsSuperUserIsAdminIsModeratorIsAuthor)
+    permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
+    pagination_class = PageNumberPagination
 
     def get_review(self):
-        return get_object_or_404(
-            Review,
-            pk=self.kwargs.get('review_id'),
-            title__id=self.kwargs.get('title_id'))
+        review_id = self.kwargs.get("review_id")
+        title_id = self.kwargs.get("title_id")
+        comment_review = get_object_or_404(
+            Review, id=review_id, title_id=title_id
+        )
+        return comment_review
 
     def get_queryset(self):
         return self.get_review().comments.all()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, review=self.get_review())
+        serializer.save(review=self.get_review(), author=self.request.user)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     """Вьюсет отзывов."""
     serializer_class = ReviewSerializer
-    permission_classes = (
-        IsAuthenticatedOrReadOnly, IsSuperUserIsAdminIsModeratorIsAuthor
-    )
+    permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
         return get_object_or_404(
             Title, pk=self.kwargs.get('title_id')
-            ).reviews.all()
+        ).reviews.all()
 
     def perform_create(self, serializer):
         serializer.save(
