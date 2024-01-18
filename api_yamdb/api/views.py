@@ -9,7 +9,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
-    AllowAny)
+    AllowAny, IsAuthenticated)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Genre, Title, User, Review
@@ -31,6 +31,7 @@ from .serializers import (
     CommentSerializer,
     TokenSerializer,
     UserSerializer,
+    UserEditSerializer,
 )
 
 
@@ -91,45 +92,30 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsSuperUserOrIsAdminOnly,)
-    search_fields = ('username',)
     pagination_class = PageNumberPagination
-
-    @action(
-        detail=False,
-        methods=['get', 'patch', 'delete'],
-        url_path=r'(?P<username>[\w.@+-]+)',
-    )
-    def get_user_by_username(self, request, username):
-        """Получает данные пользователя по его username"""
-        user = get_object_or_404(User, username=username)
-        if request.method == 'PATCH':
-            serializer = UserSerializer(user, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        elif request.method == 'DELETE':
-            user.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        serializer = UserSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    lookup_field = 'username'
 
     @action(
         detail=False,
         methods=['get', 'patch'],
         url_path='me',
+        permission_classes=(IsAuthenticated,),
+        serializer_class=UserEditSerializer,
     )
     def get_users_own_profile(self, request):
-        """Пользователь получает информацию о себе и может редактировать её."""
-        if request.method == 'PATCH':
-            serializer = UserSerializer(
-                request.user, data=request.data,
-                partial=True, context={'request': request}
+        """Получает информацию о пользователе и может редактировать её."""
+        user = request.user
+        if request.method == "PATCH":
+            serializer = self.get_serializer(
+                user, data=request.data, partial=True
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            serializer.save(role=request.user.role)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UserSerializer(request.user)
+        elif request.method == 'DELETE':
+            user.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
