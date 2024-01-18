@@ -93,6 +93,9 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsSuperUserOrIsAdminOnly,)
     pagination_class = PageNumberPagination
     lookup_field = 'username'
+    filter_backends = [SearchFilter]
+    search_fields = ['username']
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
 
     @action(
         detail=False,
@@ -152,6 +155,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     pagination_class = PageNumberPagination
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -164,6 +168,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
     pagination_class = PageNumberPagination
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
 
     def get_queryset(self):
         review_id = get_object_or_404(Review, pk=self.kwargs.get('review_id'))
@@ -182,6 +187,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
     pagination_class = PageNumberPagination
+    http_method_names = ['get', 'list', 'post', 'patch', 'delete', ]
 
     def get_queryset(self):
         return get_object_or_404(
