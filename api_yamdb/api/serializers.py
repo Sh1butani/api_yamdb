@@ -23,6 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
         return username
 
 
+class UserEditSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        read_only_fields = ("role",)
+
+
 class TokenSerializer(serializers.Serializer):
     username = serializers.RegexField(
         regex=r'^[\w.@+-]+$',
