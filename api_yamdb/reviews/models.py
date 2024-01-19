@@ -1,10 +1,20 @@
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+
+from api_yamdb.settings import (
+    ADMIN,
+    MAX_LENGTH,
+    MAX_MARK,
+    MAX_NAME_LENGTH,
+    MAX_ROLE_LENGTH,
+    MIN_MARK,
+    MODERATOR,
+    USER,
+)
+
 from .validators import validate_username, year_validator
-from api_yamdb.settings import (USER, MODERATOR, ADMIN, MAX_LENGTH,
-                                MAX_NAME_LENGTH, MIN_MARK, MAX_MARK)
 
 
 class User(AbstractUser):
