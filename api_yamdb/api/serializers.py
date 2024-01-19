@@ -2,9 +2,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
-from reviews.models import (
-    MAX_LENGTH, MAX_EMAIL_LENGTH, Category, Comment, Genre, Review, Title, User
-)
+from reviews.models import Category, Comment, Genre, Review, Title, User
+from api_yamdb.settings import MAX_EMAIL_LENGTH, MAX_LENGTH
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -84,9 +83,8 @@ class TitleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
-        )
+        fields = ('id', 'name', 'year',
+                  'description', 'genre', 'category', 'rating')
 
 
 class TitleCreateSerializer(serializers.ModelSerializer):
@@ -100,6 +98,17 @@ class TitleCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Title
         fields = '__all__'
+
+    def to_representation(self, instance):
+        return {
+            'id': instance.id,
+            'name': instance.name,
+            'year': instance.year,
+            'rating': None,
+            'description': instance.description,
+            'genre': GenreSerializer(instance.genre.all(), many=True).data,
+            'category': CategorySerializer(instance.category).data,
+        }
 
 
 class ReviewSerializer(serializers.ModelSerializer):

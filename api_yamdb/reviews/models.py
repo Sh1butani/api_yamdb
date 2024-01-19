@@ -1,18 +1,10 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.core.validators import RegexValidator
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
-
-USER = 'user'
-MODERATOR = 'moderator'
-ADMIN = 'admin'
-MAX_LENGTH = 150
-MAX_EMAIL_LENGTH = 254
-MAX_TITLE_LENGTH = 20
-MAX_NAME_LENGTH = 256
-MAX_SLUG_LENGTH = 50
-MAX_ROLE_LENGTH = 25
+from .validators import validate_username, year_validator
+from api_yamdb.settings import (USER, MODERATOR, ADMIN, MAX_LENGTH,
+                                MAX_NAME_LENGTH, MIN_MARK, MAX_MARK)
 
 
 class User(AbstractUser):
@@ -26,14 +18,14 @@ class User(AbstractUser):
         'Имя пользователя',
         unique=True,
         max_length=MAX_LENGTH,
-        validators=[RegexValidator(
+        validators=[UnicodeUsernameValidator(
             regex=r'^[\w.@+-]+\Z',
             message='Недопустимый символ!'
-        )]
+        ), validate_username]
     )
-    email = models.EmailField(
-        'Почта', max_length=MAX_EMAIL_LENGTH, unique=True
-    )
+
+    email = models.EmailField(unique=True,
+                              verbose_name='Почта')
     first_name = models.CharField(
         'Имя', max_length=MAX_LENGTH, blank=True
     )
@@ -70,14 +62,13 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
     def __str__(self):
-        return self.username[:MAX_TITLE_LENGTH]
+        return self.username
 
 
 class Category(models.Model):
     name = models.CharField(max_length=MAX_NAME_LENGTH,
                             verbose_name='Название')
-    slug = models.SlugField(max_length=MAX_SLUG_LENGTH,
-                            unique=True,
+    slug = models.SlugField(unique=True,
                             verbose_name='Уникальный слаг')
 
     class Meta:
@@ -92,8 +83,7 @@ class Category(models.Model):
 class Genre(models.Model):
     name = models.CharField(max_length=MAX_NAME_LENGTH,
                             verbose_name='Название')
-    slug = models.SlugField(max_length=MAX_SLUG_LENGTH,
-                            unique=True,
+    slug = models.SlugField(unique=True,
                             verbose_name='Уникальный слаг')
 
     class Meta:
@@ -121,17 +111,18 @@ class Title(models.Model):
     name = models.CharField(
         max_length=MAX_NAME_LENGTH, verbose_name='Название'
     )
-    year = models.IntegerField(
-        verbose_name='Год издания'
-    )
+    year = models.SmallIntegerField(
+        'Год выпуска',
+        validators=(year_validator,),
+        help_text='Введите год, который не превышает текущий.',)
     description = models.TextField(
-        verbose_name='Описание', blank=True
+        verbose_name='Описание', blank=True,
     )
 
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
-        ordering = ['name',]
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -175,8 +166,18 @@ class Review(models.Model):
         verbose_name='Автор'
     )
     score = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
-        verbose_name='Оценка'
+        verbose_name='Оценка',
+        validators=(
+            MinValueValidator(
+                MIN_MARK,
+                message=f'Нельзя ставить оценку ниже {MIN_MARK}.',
+            ),
+            MaxValueValidator(
+                MAX_MARK,
+                message=f'Нельзя ставить оценку выше {MAX_MARK}.',
+            ),
+        ),
+        help_text=f'Введите оценку от {MIN_MARK} до {MAX_MARK}.'
     )
     text = models.TextField(
         verbose_name='Отзыв'
@@ -189,7 +190,12 @@ class Review(models.Model):
     class Meta:
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
-        unique_together = ('title', 'author',)
+        constraints = [
+            models.UniqueConstraint(
+                name='%(app_label)s_%(class)s_unique_review',
+                fields=['author', 'title'],
+            ),
+        ]
         ordering = ('pub_date',)
 
     def __str__(self):
