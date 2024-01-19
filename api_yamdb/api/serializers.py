@@ -1,10 +1,11 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from reviews.models import (
     MAX_LENGTH, MAX_EMAIL_LENGTH, Category, Comment, Genre, Review, Title, User
 )
+from .validators import validate_username
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -15,13 +16,6 @@ class UserSerializer(serializers.ModelSerializer):
         )
         model = User
 
-    def validate_username(self, username):
-        if username in 'me':
-            raise serializers.ValidationError(
-                'Использовать имя "me" запрещено'
-            )
-        return username
-
 
 class UserEditSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
@@ -29,10 +23,10 @@ class UserEditSerializer(UserSerializer):
 
 
 class TokenSerializer(serializers.Serializer):
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+$',
+    username = serializers.CharField(
         max_length=MAX_LENGTH,
-        required=True
+        required=True,
+        validators=[validate_username, UnicodeUsernameValidator()]
     )
     confirmation_code = serializers.CharField(
         max_length=MAX_LENGTH,
@@ -45,22 +39,15 @@ class SignupSerializer(serializers.Serializer):
     email = serializers.EmailField(
         max_length=MAX_EMAIL_LENGTH, required=True
     )
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+$',
+    username = serializers.CharField(
         max_length=MAX_LENGTH,
-        required=True
+        required=True,
+        validators=[validate_username, UnicodeUsernameValidator()]
     )
 
     class Meta:
         model = User
         fields = ('email', 'username')
-
-    def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Использовать имя "me" запрещено'
-            )
-        return value
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -80,7 +67,7 @@ class TitleSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(
         read_only=True, many=True
     )
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = Title
@@ -108,9 +95,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         slug_field='username',
         read_only=True
     )
-    score = serializers.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(10)]
-    )
 
     class Meta:
         model = Review
@@ -118,10 +102,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Запрещает пользователям оставлять повторные отзывы."""
-        request = self.context["request"]
-        if request.method == "POST":
+        request = self.context['request']
+        if request.method == 'POST':
             author = request.user
-            title_id = self.context["view"].kwargs.get("title_id")
+            title_id = self.context['view'].kwargs.get('title_id')
             title = get_object_or_404(Title, pk=title_id)
             if Review.objects.filter(author=author, title=title).exists():
                 raise serializers.ValidationError(

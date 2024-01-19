@@ -42,18 +42,23 @@ def signup(request):
     """
     serializer = SignupSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data.get('username')
+    email = serializer.validated_data.get('email')
     try:
-        username = serializer.validated_data.get('username')
-        email = serializer.validated_data.get('email')
         user, created = User.objects.get_or_create(
             username=username, email=email
         )
     except IntegrityError:
+        if User.objects.filter(email=email).exists():
+            error_response = {
+                "email": ["Пользователь с таким email уже существует."]
+            }
+        else:
+            error_response = {
+                "username": ["Пользователь с таким username уже существует."]
+            }
         return Response(
-            'Эта электронная почта уже занята!' if User.objects.filter(
-                email=serializer.validated_data.get('email')
-            ).exists()
-            else 'Это имя пользователя уже занято!',
+            error_response,
             status.HTTP_400_BAD_REQUEST)
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
@@ -95,7 +100,7 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = [SearchFilter]
     lookup_field = 'username'
     search_fields = ['username']
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     @action(
         detail=False,
@@ -107,15 +112,12 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_users_own_profile(self, request):
         """Получает информацию о пользователе и может редактировать её."""
         user = request.user
-        if request.method == "PATCH":
+        if request.method == 'PATCH':
             serializer = self.get_serializer(
                 user, data=request.data, partial=True
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-        elif request.method == 'DELETE':
-            user.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -155,7 +157,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -187,15 +189,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'list', 'post', 'patch', 'delete']
+    http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_title(self):
+        return get_object_or_404(Title, pk=self.kwargs.get('title_id'))
 
     def get_queryset(self):
-        return get_object_or_404(
-            Title, pk=self.kwargs.get('title_id')
-        ).reviews.all()
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
         serializer.save(
             author=self.request.user,
-            title=get_object_or_404(Title, id=self.kwargs.get('title_id'))
+            title=self.get_title()
         )
