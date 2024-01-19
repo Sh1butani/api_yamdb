@@ -5,7 +5,7 @@ from rest_framework.generics import get_object_or_404
 from reviews.models import (
     MAX_LENGTH, MAX_EMAIL_LENGTH, Category, Comment, Genre, Review, Title, User
 )
-from .validators import validate_username
+from reviews.validators import validate_username
 
 
 class UserSerializer(serializers.ModelSerializer):
