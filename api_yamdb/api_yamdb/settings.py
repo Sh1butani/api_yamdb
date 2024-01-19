@@ -110,7 +110,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 7,
+    'PAGE_SIZE': 10,
 }
 
 SIMPLE_JWT = {
@@ -119,3 +119,14 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'reviews.User'
+
+USER = 'user'
+MODERATOR = 'moderator'
+ADMIN = 'admin'
+MAX_LENGTH = 150
+MAX_TITLE_LENGTH = 20
+MAX_NAME_LENGTH = 256
+MAX_SLUG_LENGTH = 50
+MIN_MARK = 1
+MAX_MARK = 10
+MAX_EMAIL_LENGTH = 254
