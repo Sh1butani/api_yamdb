@@ -50,14 +50,15 @@ def signup(request):
             username=username, email=email
         )
     except IntegrityError:
+        error_response = {}
         if User.objects.filter(email=email).exists():
-            error_response = {
-                "email": ["Пользователь с таким email уже существует."]
-            }
-        else:
-            error_response = {
-                "username": ["Пользователь с таким username уже существует."]
-            }
+            error_response["email"] = [
+                "Пользователь с таким email уже существует."
+            ]
+        if User.objects.filter(username=username).exists():
+            error_response["username"] = [
+                "Пользователь с таким username уже существует."
+            ]
         return Response(
             error_response,
             status.HTTP_400_BAD_REQUEST)

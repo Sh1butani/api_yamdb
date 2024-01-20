@@ -28,10 +28,7 @@ class User(AbstractUser):
         'Имя пользователя',
         unique=True,
         max_length=MAX_LENGTH,
-        validators=[UnicodeUsernameValidator(
-            regex=r'^[\w.@+-]+\Z',
-            message='Недопустимый символ!'
-        ), validate_username]
+        validators=[UnicodeUsernameValidator(), validate_username]
     )
 
     email = models.EmailField(unique=True,

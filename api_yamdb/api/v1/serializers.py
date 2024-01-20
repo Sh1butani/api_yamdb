@@ -87,15 +87,7 @@ class TitleCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def to_representation(self, instance):
-        return {
-            'id': instance.id,
-            'name': instance.name,
-            'year': instance.year,
-            'rating': None,
-            'description': instance.description,
-            'genre': GenreSerializer(instance.genre.all(), many=True).data,
-            'category': CategorySerializer(instance.category).data,
-        }
+        return TitleSerializer(instance).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
